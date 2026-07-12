@@ -210,7 +210,7 @@ class _TodoPageState extends State<TodoPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Thêm Todo"),
+          title: const Text("Add new Todo"),
 
           content: Column(
             mainAxisSize: MainAxisSize.min,
