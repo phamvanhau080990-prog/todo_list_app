@@ -1,9 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
-import 'config/api_endpoints.dart';
+import 'models/todo.dart';
+import 'services/api_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,24 +12,36 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: TodoPage());
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: TodoPage(),
+    );
   }
 }
 
 class TodoPage extends StatefulWidget {
+  const TodoPage({super.key});
+
   @override
   State<TodoPage> createState() => _TodoPageState();
 }
 
 class _TodoPageState extends State<TodoPage> {
-  List todos = [];
+  List<Todo> todos = [];
 
   Future<void> loadTodos() async {
-    final response = await http.get(Uri.parse(ApiEndpoints.todos));
-
-    setState(() {
-      todos = jsonDecode(response.body);
-    });
+    try {
+      final loadedTodos = await ApiService.getTodos();
+      if (!mounted) return;
+      setState(() {
+        todos = loadedTodos;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể tải danh sách: $e')));
+    }
   }
 
   @override
@@ -43,45 +53,36 @@ class _TodoPageState extends State<TodoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Todo List")),
+      appBar: AppBar(title: const Text('Todo List')),
       body: RefreshIndicator(
         onRefresh: () async {
           await loadTodos();
         },
-
         child: ListView.builder(
           itemCount: todos.length,
-
           itemBuilder: (context, index) {
             final todo = todos[index];
 
             return ListTile(
               leading: Checkbox(
-                value: todo["completed"],
+                value: todo.completed,
                 onChanged: (value) async {
-                  await updateTodoStatus(todo, value!);
+                  if (value == null) return;
+                  await updateTodoStatus(todo, value);
                 },
               ),
-
-              title: Text(todo["title"]),
-
-              subtitle: Text("Deadline: ${todo["deadline"]}"),
-
+              title: Text(todo.title),
+              subtitle: Text('Deadline: ${todo.deadline}'),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit),
-                    onPressed: () {
-                      editTodoDialog(todo);
-                    },
+                    onPressed: () => editTodoDialog(todo),
                   ),
-
                   IconButton(
                     icon: const Icon(Icons.delete),
-                    onPressed: () {
-                      deleteTodo(todo["id"]);
-                    },
+                    onPressed: () => deleteTodo(todo.id),
                   ),
                 ],
               ),
@@ -91,7 +92,6 @@ class _TodoPageState extends State<TodoPage> {
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
-
         onPressed: () {
           addTodoDialog();
         },
@@ -99,68 +99,71 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
-  Future updateTodoStatus(Map todo, bool completed) async {
-    await http.put(
-      Uri.parse("${ApiEndpoints.todos}/${todo["id"]}"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "title": todo["title"],
-        "deadline": todo["deadline"],
-        "completed": completed,
-      }),
-    );
-
-    loadTodos();
+  Future<void> updateTodoStatus(Todo todo, bool completed) async {
+    try {
+      await ApiService.updateTodo(
+        id: todo.id,
+        title: todo.title,
+        deadline: todo.deadline,
+        completed: completed,
+      );
+      await loadTodos();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Cập nhật thất bại: $e')));
+    }
   }
 
-  Future deleteTodo(int id) async {
-    await http.delete(Uri.parse("${ApiEndpoints.todos}/$id"));
-    loadTodos();
+  Future<void> deleteTodo(int id) async {
+    try {
+      await ApiService.deleteTodo(id);
+      await loadTodos();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Xóa thất bại: $e')));
+    }
   }
 
-  Future editTodoDialog(Map todo) async {
-    TextEditingController titleController = TextEditingController(
-      text: todo["title"],
-    );
+  Future<void> editTodoDialog(Todo todo) async {
+    final titleController = TextEditingController(text: todo.title);
+    final deadlineController = TextEditingController(text: todo.deadline);
 
-    TextEditingController deadlineController = TextEditingController(
-      text: todo["deadline"],
-    );
-
-    showDialog(
+    await showDialog<void>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
-          title: const Text("Sửa Todo"),
-
+          title: const Text('Sửa Todo'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleController,
-                decoration: const InputDecoration(labelText: "Title"),
+                decoration: const InputDecoration(labelText: 'Title'),
               ),
-
               TextField(
                 controller: deadlineController,
                 readOnly: true,
                 decoration: const InputDecoration(
-                  labelText: "Deadline",
+                  labelText: 'Deadline',
                   suffixIcon: Icon(Icons.calendar_month),
                 ),
                 onTap: () async {
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
+                  final pickedDate = await showDatePicker(
+                    context: dialogContext,
                     initialDate: DateTime.now(),
                     firstDate: DateTime(2020),
                     lastDate: DateTime(2100),
                   );
 
                   if (pickedDate != null) {
-                    String formattedDate =
-                        "${pickedDate.year}-"
-                        "${pickedDate.month.toString().padLeft(2, '0')}-"
-                        "${pickedDate.day.toString().padLeft(2, '0')}";
+                    final formattedDate =
+                        '${pickedDate.year}-'
+                        '${pickedDate.month.toString().padLeft(2, '0')}-'
+                        '${pickedDate.day.toString().padLeft(2, '0')}';
 
                     deadlineController.text = formattedDate;
                   }
@@ -168,32 +171,33 @@ class _TodoPageState extends State<TodoPage> {
               ),
             ],
           ),
-
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               },
-              child: const Text("Hủy"),
+              child: const Text('Hủy'),
             ),
-
             ElevatedButton(
               onPressed: () async {
-                await http.put(
-                  Uri.parse("${ApiEndpoints.todos}/${todo["id"]}"),
-                  headers: {"Content-Type": "application/json"},
-                  body: jsonEncode({
-                    "title": titleController.text,
-                    "deadline": deadlineController.text,
-                    "completed": todo["completed"],
-                  }),
-                );
-
-                Navigator.pop(context);
-
-                loadTodos();
+                try {
+                  await ApiService.updateTodo(
+                    id: todo.id,
+                    title: titleController.text,
+                    deadline: deadlineController.text,
+                    completed: todo.completed,
+                  );
+                  if (!mounted) return;
+                  Navigator.pop(dialogContext);
+                  await loadTodos();
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Cập nhật thất bại: $e')),
+                  );
+                }
               },
-              child: const Text("Lưu"),
+              child: const Text('Lưu'),
             ),
           ],
         );
@@ -201,45 +205,42 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
-  Future addTodoDialog() async {
-    TextEditingController titleController = TextEditingController();
+  Future<void> addTodoDialog() async {
+    final titleController = TextEditingController();
+    final deadlineController = TextEditingController();
 
-    TextEditingController deadlineController = TextEditingController();
-
-    showDialog(
+    await showDialog<void>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
-          title: const Text("Add new Todo"),
-
+          title: const Text('Add new Todo'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleController,
-                decoration: const InputDecoration(labelText: "Title"),
+                decoration: const InputDecoration(labelText: 'Title'),
               ),
-
               TextField(
                 controller: deadlineController,
                 readOnly: true,
                 decoration: const InputDecoration(
-                  labelText: "Deadline",
+                  labelText: 'Deadline',
                   suffixIcon: Icon(Icons.calendar_month),
                 ),
                 onTap: () async {
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
+                  final pickedDate = await showDatePicker(
+                    context: dialogContext,
                     initialDate: DateTime.now(),
                     firstDate: DateTime(2020),
                     lastDate: DateTime(2100),
                   );
 
                   if (pickedDate != null) {
-                    String formattedDate =
-                        "${pickedDate.year}-"
-                        "${pickedDate.month.toString().padLeft(2, '0')}-"
-                        "${pickedDate.day.toString().padLeft(2, '0')}";
+                    final formattedDate =
+                        '${pickedDate.year}-'
+                        '${pickedDate.month.toString().padLeft(2, '0')}-'
+                        '${pickedDate.day.toString().padLeft(2, '0')}';
 
                     deadlineController.text = formattedDate;
                   }
@@ -247,24 +248,25 @@ class _TodoPageState extends State<TodoPage> {
               ),
             ],
           ),
-
           actions: [
             ElevatedButton(
               onPressed: () async {
-                await http.post(
-                  Uri.parse(ApiEndpoints.todos),
-                  headers: {"Content-Type": "application/json"},
-                  body: jsonEncode({
-                    "title": titleController.text,
-                    "deadline": deadlineController.text,
-                  }),
-                );
-
-                Navigator.pop(context);
-
-                loadTodos();
+                try {
+                  await ApiService.createTodo(
+                    title: titleController.text,
+                    deadline: deadlineController.text,
+                  );
+                  if (!mounted) return;
+                  Navigator.pop(dialogContext);
+                  await loadTodos();
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Không thể thêm todo: $e')),
+                  );
+                }
               },
-              child: const Text("Lưu"),
+              child: const Text('Lưu'),
             ),
           ],
         );

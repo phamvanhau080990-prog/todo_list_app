@@ -1,3 +1,30 @@
+# Todo List App
+
+This project contains a FastAPI backend and a Flutter frontend for a todo list application.
+
+## Requirements
+
+- Python 3.10+
+- Flutter SDK
+
+## Backend
+
+```bash
+cd todo_backend
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate
+pip install -r ../requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+## Frontend
+
+```bash
+cd todo_frontend
+flutter pub get
+flutter run
+```
+
 # Cấu trúc dự án Todo List
 
 ## Mục đích tổng quan
@@ -9,6 +36,16 @@ Dự án này là một ứng dụng todo list dạng phân tách frontend-backe
 - Cơ sở dữ liệu: SQLite (file `todo_backend/todo.db`).
 
 Tài liệu này dùng làm căn cứ để mở rộng dự án sau này, đặc biệt khi thêm tính năng, module mới hoặc tách service.
+
+## Những cải thiện đã thực hiện
+
+Trong lần cập nhật này, dự án đã được cải thiện ở các điểm sau:
+
+1. Thêm file quản lý phụ thuộc backend ở gốc: `requirements.txt`.
+2. Thêm file `.gitignore` để loại bỏ thư mục build, môi trường ảo, file dữ liệu local và artifact không cần commit.
+3. Tạo file hướng dẫn chạy ứng dụng ở gốc: `README.md`.
+4. Tách logic gọi API khỏi UI Flutter bằng cách dùng `lib/services/api_service.dart` và model `lib/models/todo.dart`.
+5. Cập nhật cấu hình endpoint API ở `lib/config/api_endpoints.dart` để quản lý URL tập trung.
 
 ---
 
