@@ -12,8 +12,13 @@ This project contains a FastAPI backend and a Flutter frontend for a todo list a
 ```bash
 cd todo_backend
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate
+
+cd D:/todo_list_app/todo_backend
+
+venv/Scripts/python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000
+
 pip install -r ../requirements.txt
+
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -77,7 +82,6 @@ todo_list_app/
 │   ├── windows/                 # Project Windows native
 │   ├── pubspec.yaml             # Cấu hình package Flutter và dependencies
 │   └── README.md                # Hướng dẫn chạy frontend
-└── PROJECT_STRUCTURE.md         # Tài liệu cấu trúc dự án hiện tại
 ```
 
 ---
@@ -112,11 +116,13 @@ todo_list_app/
 Là phần server-side của ứng dụng.
 
 #### `database.py`
+
 - Quản lý kết nối cơ sở dữ liệu.
 - Tạo engine SQLAlchemy và SessionLocal.
 - Dùng để khởi tạo kết nối với SQLite.
 
 #### `main.py`
+
 - File entry point của FastAPI.
 - Định nghĩa các endpoint:
   - `GET /todos`
@@ -126,19 +132,23 @@ Là phần server-side của ứng dụng.
 - Chịu trách nhiệm xử lý request và tương tác với database.
 
 #### `models.py`
+
 - Định nghĩa model dữ liệu `Todo`.
 - Là lớp ORM biểu diễn bảng dữ liệu trong database.
 
 #### `schemas.py`
+
 - Định nghĩa schema dùng cho request và response.
 - Giúp FastAPI validate dữ liệu đầu vào và đầu ra.
 - Phù hợp để tách riêng logic dữ liệu và logic API.
 
 #### `todo.db`
+
 - File cơ sở dữ liệu SQLite local.
 - Dùng để lưu trữ dữ liệu todo trong môi trường phát triển.
 
 #### `venv/`
+
 - Môi trường ảo Python cho backend.
 - Không nên đưa vào git nếu không cần thiết.
 
@@ -147,27 +157,33 @@ Là phần server-side của ứng dụng.
 Là phần client-side của ứng dụng.
 
 #### `lib/main.dart`
+
 - File chính của ứng dụng Flutter.
 - Chứa UI chính, xử lý hiển thị danh sách todo và các thao tác CRUD.
 - Hiện tại có thể chứa cả UI và logic gọi API, nhưng về lâu dài nên tách thành các file riêng hơn.
 
 #### `lib/config/`
+
 - Chứa cấu hình dùng chung cho frontend.
 - Ví dụ: endpoint API (`api_endpoints.dart`).
 
 #### `lib/models/`
+
 - Chứa model dữ liệu biểu diễn cho các object trên frontend.
 - Dùng để làm việc với dữ liệu trong Dart thay vì dùng map thông thường.
 
 #### `lib/services/`
+
 - Chứa lớp service để gọi HTTP API.
 - Nên tách riêng phần giao tiếp backend khỏi UI để dễ bảo trì và mở rộng.
 
 #### `pubspec.yaml`
+
 - File cấu hình package Flutter.
 - Chứa dependencies như `http`, `flutter_lints`, và thông tin project.
 
 #### `android/`, `ios/`, `web/`, `windows/`, `linux/`, `macos/`
+
 - Là project native tương ứng với từng nền tảng.
 - Dùng để build và chạy ứng dụng trên mobile/desktop/web.
 
@@ -178,17 +194,18 @@ Là phần client-side của ứng dụng.
 Khi dự án phát triển, nên giữ nguyên cấu trúc phân tầng sau:
 
 - Backend:
+
   - Tách router, service, repository, model rõ ràng.
   - Có thể thêm file `routers/`, `services/`, `repositories/`.
-
 - Frontend:
+
   - Tách UI và logic API.
   - Có thể thêm:
     - `lib/screens/` cho các màn hình
     - `lib/widgets/` cho component tái sử dụng
     - `lib/providers/` hoặc `lib/blocs/` nếu dùng state management
-
 - Tổng thể:
+
   - Thêm file `README.md` ở gốc để hướng dẫn cài đặt và chạy toàn bộ hệ thống.
   - Thêm `.gitignore` đầy đủ để loại bỏ file build, thư mục ảo và file dữ liệu local.
 
