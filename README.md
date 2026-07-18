@@ -26,6 +26,9 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ```bash
 cd todo_frontend
+
+flutter build apk --release
+
 flutter pub get
 flutter run
 ```
